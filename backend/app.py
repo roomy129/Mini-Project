@@ -8,8 +8,33 @@ from auth import generate_token, token_required, role_required
 import models
 
 app = Flask(__name__)
-# Enable CORS for all frontend requests
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Configure allowed origins from environment variable or default to wildcard for Vercel frontend
+frontend_url = os.environ.get('FRONTEND_URL', '*')
+if frontend_url != '*' and ',' in frontend_url:
+    allowed_origins = [url.strip() for url in frontend_url.split(',')]
+elif frontend_url != '*':
+    allowed_origins = [frontend_url.strip()]
+else:
+    allowed_origins = '*'
+
+CORS(app, resources={r"/api/*": {
+    "origins": allowed_origins,
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
+}})
+
+@app.after_request
+def add_cors_headers(response):
+    if allowed_origins == '*':
+        response.headers['Access-Control-Allow-Origin'] = '*'
+    else:
+        origin = request.headers.get('Origin')
+        if origin and (origin in allowed_origins or '*' in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    return response
 
 # -------------------------------------------------------------
 # AUTHENTICATION ENDPOINTS

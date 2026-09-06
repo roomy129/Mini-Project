@@ -9,6 +9,7 @@ export const StudentDashboard = ({ onNavigate, onSelectFaculty }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -17,11 +18,13 @@ export const StudentDashboard = ({ onNavigate, onSelectFaculty }) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getFacultyList();
       setFacultyList(data.faculty || []);
       setMetrics(data.metrics || { total: 0, available: 0, busy: 0, not_available: 0 });
     } catch (err) {
-      console.error("Error loading student dashboard:", err);
+      console.error("Error loading faculty dashboard data:", err);
+      setError(err.message || 'Failed to load live faculty data from server.');
     } finally {
       setLoading(false);
     }
@@ -32,7 +35,7 @@ export const StudentDashboard = ({ onNavigate, onSelectFaculty }) => {
     onNavigate('find_faculty', { search: searchQuery, department: selectedDept });
   };
 
-  // Recent 3 faculty updates
+  // Recent faculty updates from real API data
   const recentFaculty = [...facultyList]
     .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
     .slice(0, 4);
@@ -270,104 +273,156 @@ export const StudentDashboard = ({ onNavigate, onSelectFaculty }) => {
           </button>
         </div>
 
-        {/* Grid of Faculty Cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-          gap: '16px'
-        }}>
-          {recentFaculty.map((f) => (
-            <div
-              key={f.id}
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '18px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
-              }}
+        {/* Error State Banner */}
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            padding: '14px 18px',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle style={{ width: '18px', height: '18px', color: '#dc2626', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.86rem', fontWeight: '600' }}>{error}</span>
+            </div>
+            <button
+              onClick={fetchDashboardData}
+              className="btn-secondary"
+              style={{ padding: '5px 12px', fontSize: '0.78rem' }}
             >
-              <div>
-                {/* Header with Name and Status */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                  <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>
-                      {f.name}
-                    </h4>
-                    <p style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                      {f.designation} • {f.department}
-                    </p>
-                  </div>
-                  <StatusBadge status={f.status} sharingEnabled={f.sharing_enabled} size="sm" />
-                </div>
+              Retry
+            </button>
+          </div>
+        )}
 
-                {/* Location Info */}
-                <div style={{
-                  background: '#f8fafc',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                  marginTop: '10px',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.82rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1e3a8a', fontWeight: '700', marginBottom: '4px' }}>
-                    <MapPin style={{ width: '14px', height: '14px', color: '#2563eb' }} />
-                    <span>Current Location:</span>
-                  </div>
-                  <div style={{ color: '#334155', fontWeight: '600' }}>
-                    {f.building_name ? (
-                      f.sharing_enabled ? (
-                        <span>{f.building_name} → {f.floor_display} → Room {f.room_display}</span>
-                      ) : (
-                        <span>{f.building_name} <span style={{ color: '#64748b', fontStyle: 'italic' }}>(Room hidden by faculty)</span></span>
-                      )
-                    ) : (
-                      <span style={{ color: '#94a3b8' }}>Location not updated yet</span>
-                    )}
-                  </div>
-                </div>
+        {/* Loading State */}
+        {loading && (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              border: '3px solid #cbd5e1',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 10px'
+            }} />
+            <span style={{ fontSize: '0.86rem' }}>Fetching live faculty records from API...</span>
+          </div>
+        )}
 
-                {/* Timetable Discrepancy Alert */}
-                {f.location_differs && (
-                  <div className="diff-alert-banner">
-                    <AlertTriangle style={{ width: '16px', height: '16px', color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+        {/* Grid of Faculty Cards */}
+        {!loading && !error && recentFaculty.length === 0 && (
+          <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '10px' }}>
+            No faculty records available in the database.
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+            gap: '16px'
+          }}>
+            {recentFaculty.map((f) => (
+              <div
+                key={f.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
+                }}
+              >
+                <div>
+                  {/* Header with Name and Status */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
                     <div>
-                      <strong style={{ display: 'block' }}>⚠ Location differs from timetable</strong>
-                      <span style={{ fontSize: '0.76rem' }}>
-                        Expected: {f.expected_location?.location_display}
-                      </span>
+                      <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>
+                        {f.name}
+                      </h4>
+                      <p style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                        {f.designation} • {f.department}
+                      </p>
+                    </div>
+                    <StatusBadge status={f.status} sharingEnabled={f.sharing_enabled} size="sm" />
+                  </div>
+
+                  {/* Location Info */}
+                  <div style={{
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    marginTop: '10px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '0.82rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1e3a8a', fontWeight: '700', marginBottom: '4px' }}>
+                      <MapPin style={{ width: '14px', height: '14px', color: '#2563eb' }} />
+                      <span>Current Location:</span>
+                    </div>
+                    <div style={{ color: '#334155', fontWeight: '600' }}>
+                      {f.building_name ? (
+                        f.sharing_enabled ? (
+                          <span>{f.building_name} → {f.floor_display} → Room {f.room_display}</span>
+                        ) : (
+                          <span>{f.building_name} <span style={{ color: '#64748b', fontStyle: 'italic' }}>(Room hidden by faculty)</span></span>
+                        )
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>Location not updated yet</span>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div style={{
-                marginTop: '16px',
-                paddingTop: '12px',
-                borderTop: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  Updated: {f.updated_at ? new Date(f.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
-                </span>
+                  {/* Timetable Discrepancy Alert */}
+                  {f.location_differs && (
+                    <div className="diff-alert-banner">
+                      <AlertTriangle style={{ width: '16px', height: '16px', color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong style={{ display: 'block' }}>⚠ Location differs from timetable</strong>
+                        <span style={{ fontSize: '0.76rem' }}>
+                          Expected: {f.expected_location?.location_display}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                <button
-                  onClick={() => onSelectFaculty(f.id)}
-                  className="btn-secondary"
-                  style={{ padding: '5px 12px', fontSize: '0.78rem' }}
-                >
-                  View Details →
-                </button>
+                <div style={{
+                  marginTop: '16px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid #f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    Updated: {f.updated_at ? new Date(f.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                  </span>
+
+                  <button
+                    onClick={() => onSelectFaculty(f.id)}
+                    className="btn-secondary"
+                    style={{ padding: '5px 12px', fontSize: '0.78rem' }}
+                  >
+                    View Details →
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

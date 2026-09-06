@@ -10,6 +10,7 @@ export const FindFacultyPage = ({ initialFilters = {}, onSelectFaculty, addToast
   const [building, setBuilding] = useState('All');
   const [status, setStatus] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export const FindFacultyPage = ({ initialFilters = {}, onSelectFaculty, addToast
   const fetchFaculty = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getFacultyList({
         search,
         department,
@@ -30,6 +32,7 @@ export const FindFacultyPage = ({ initialFilters = {}, onSelectFaculty, addToast
       setFaculty(data.faculty || []);
     } catch (err) {
       console.error("Error fetching faculty directory:", err);
+      setError(err.message || 'Failed to load faculty records.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -182,13 +185,43 @@ export const FindFacultyPage = ({ initialFilters = {}, onSelectFaculty, addToast
         </span>
       </div>
 
+      {/* Error State Banner */}
+      {error && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertTriangle style={{ width: '20px', height: '20px', color: '#dc2626', flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.9rem' }}>Unable to load faculty records</strong>
+              <span style={{ fontSize: '0.8rem' }}>{error}</span>
+            </div>
+          </div>
+          <button
+            onClick={fetchFaculty}
+            className="btn-secondary"
+            style={{ padding: '6px 14px', fontSize: '0.82rem' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Faculty Cards Grid */}
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
           <RefreshCw style={{ width: '28px', height: '28px', animation: 'spin 1s linear infinite', margin: '0 auto 10px', display: 'block', color: '#2563eb' }} />
-          Loading faculty locations...
+          Loading live faculty records from API...
         </div>
-      ) : faculty.length === 0 ? (
+      ) : !error && faculty.length === 0 ? (
         <div className="portal-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
           <User style={{ width: '40px', height: '40px', color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#334155' }}>No faculty found</h3>
