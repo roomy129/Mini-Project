@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart Faculty Location & Availability Tracking System
 
 A full-stack college portal module designed for academic institutions to help students and staff instantly discover where faculty members are currently available across campus buildings.
@@ -227,3 +228,7 @@ MINI PROJECT/
 
 ---
 © 2026 Apex Institute of Technology • Smart Faculty Tracking System
+=======
+# Mini-Project
+A smart college portal module for real-time/last-updated faculty location and availability tracking. Students can search faculty, view their location, status, and timetable-based expected location. Includes privacy controls, role-based authentication, admin management, and a campus map for efficient campus communication.
+>>>>>>> bfc52ee09e3d4cdf06b58419074334d061929589
